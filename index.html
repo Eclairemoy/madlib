@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="main.css">
+    <link href='https://fonts.googleapis.com/css?family=BioRhyme' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet'>
+    <script type="text/javascript">
+    
+    // hold string of lyrics
+    var wordString = "";
+    var level = 1;
+
+    // javascript object of song lyrics
+    // TODO replace with API call to musicmix or genius
+    lyrics = {"lyrics":[
+             { "song":"Figaro", "text":"The rest is empty with no brain, but the clever nerd" },
+             { "song":"Pinata", "text":"My grind divides fine through my divine eyes" },
+             { "song":"Palmolive", "text":"Look, real bars are the ill bars" }
+            ]}
+    
+    // object to hold lyrics that have been used previously
+    lyricsAlreadyUsed = {}
+
+    // array to hold the list of words that are filler words for the falling action
+    fillerWords = ["divine", "dope", "roar", "money", "look", "real", "lean", "promise",
+                    "passenger", "dim", "grind", "nothing"]
+
+    // object that holds the indicies and text of the words to fill
+    wordsToFill = {}
+
+    // lyrics from text to "drop" mixed in with the filler words
+    wordsToDrop = []
+
+    // removes the commas from the word string and makes it lowercase
+    let cleanString = (string) => { return (string.replace(/,/g,"")).toLowerCase() };
+
+    // gets a random index value from the object to pull the lyrics text
+    let getRandomIndex = (object) => { return Math.floor(Math.random() * object.length/2) };
+
+    // add the lyrics to the wordsToFill object to save for ordering
+    let addLyricsToWordsToFill = (element, index, array) => { wordsToFill[index] = element};
+
+    // a function that sets the lyrics string
+    function setWordString(lyrics) {
+      // loops over the maps in lyrics object
+      for (let lyricsObj in lyrics) {
+      // creates the word string that will be used for the mad lib by
+      // choosing a random lyric string from the object
+        objIndex = getRandomIndex(lyricsObj);
+        if (! (lyrics[lyricsObj][objIndex].text in lyricsAlreadyUsed)) {
+          // adds the index of the string as the key to the lyricsAlreadyUsed object
+          // and the value to the wordString so that this cannot be displayed again
+          // in this game session
+          lyricsAlreadyUsed[objIndex] = wordString;
+          
+          // returns string of lyrics
+          return lyrics[lyricsObj][objIndex].text;
+        }
+      }
+    }
+
+    // a function that shuffles the lyrics in the array for randomization 
+    function shuffle(lyricsArray) {
+      for (let i = lyricsArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [lyricsArray[i], lyricsArray[j]] = [lyricsArray[j], lyricsArray[i]];
+        }
+      return lyricsArray;
+    }
+
+    // a function that generates and returns the form
+    function makeForm(wordsToFill, wordsToDrop, lyricsArrayLength) {
+      var form = document.createElement("form");
+      form.method = "POST";
+      form.action = "checkAnswer();";
+      form.id = "lyricsForm";
+      // loop over the full length of the array
+      for (var i = 0; i < lyricsArrayLength; i++) {
+        let element = document.createElement("input");
+        element.name = "lyr_" + i;
+        // if the word is in words to drop leave value blank, else fill the value
+        if (! (wordsToDrop.includes(Object.values(wordsToFill)[i]))) {
+          element.value = wordsToFill[i];
+        }
+        // add the element to the form
+        form.appendChild(element);
+      }
+      // add the submit button
+      let submit = document.createElement("input");
+      submit.addEventListener('click', checkAnswer)
+      submit.setAttribute('type', 'button');
+      submit.value = "Check it"
+      form.appendChild(submit);
+      return form;
+    }
+
+    // a function that checks the name of the form elements 
+    // and returns an array of the lyrics
+    function checkName(formElements) {
+      lyricElements = [];
+      for (i = 0 ; i < formElements.length ; i++){
+        elementName = formElements[i].getAttribute("name");
+        if (elementName != null && elementName.indexOf("lyr_") == 0) {
+          lyricElements.push(formElements[i].value);
+          }
+        }
+        return lyricElements;
+    }
+
+    // a function that checks the form input for accuracy and restarts game
+    function checkAnswer(formElements) {
+      var formElements = document.getElementsByTagName("input");
+      var lyricElements = checkName(formElements);
+      for (var i=0; i < lyricElements.length; i++) {
+        if (wordsToFill[i] != lyricElements[i]) {
+          alert("not right! try again");
+          break;
+        }
+        else {
+          if (i == lyricElements.length-1) {
+            alert("you got it! on to the next level");
+            level++;
+            startGame(level, lyricsAlreadyUsed);
+          }
+        }
+      }
+    }
+
+    // a function that starts and restarts the game
+    function startGame(level, lyricsAlreadyUsed) {
+
+      // clear out any old form elements
+      document.getElementById("lyrics_form").innerHTML = "";
+      // set the level
+      document.getElementById("level").innerHTML = "Level " + level;
+
+      // sets the word string to be used from the lyrics object
+      wordString = setWordString(lyrics);
+      // makes an array from the word string
+      let lyricsArray = cleanString(wordString).split(" ");
+      const lyricsArrayLength = lyricsArray.length;
+
+      // puts the whole array and its index into 
+      // sets the words that the user will need to guess to fill in the mad lib
+      let wordChoiceOrder = lyricsArray.forEach(addLyricsToWordsToFill);
+
+      // shuffle the array
+      let shuffledArray = shuffle(lyricsArray);
+
+      // remove first x = (array.length / 3) elements from the array. create new array with these to place
+      wordsToDrop = shuffledArray.splice(0, (shuffledArray.length/3));
+
+      // const form = document.createElement("form"); // Create a form
+      var div = document.getElementById("lyrics_form");
+      let form = makeForm(wordsToFill, wordsToDrop, lyricsArrayLength);
+      div.appendChild(form);
+    }
+
+
+    ////////////////////////// Generates the falling text ////////////////////////////////
+
+    // function generateFallingText() {
+    var textObj;
+    var animate;;
+
+    function makeTextObj() {
+      let textObj = document.createElement("button");
+      textObj.setAttribute("type", "button");
+      textObj.value = "TEST WORDSSS"
+      textObj.setAttribute("id", "aaaa")
+      textObj.addEventListener('click', chooseText)
+      // textObj.style.position= "relative"; 
+      textObj.style.top = "-100px";
+      var body = document.getElementsByTagName("BODY")[0];
+      body.appendChild(textObj);
+      moveDown();
+    }
+    
+    function moveDown() {
+      textObj = document.getElementById("aaaa");
+      // textObj.style.top = parseInt(textObj.style.top) + 90 + 'px';
+      // animate = setTimeout(moveDown,20);    // call moveDown in 20msec
+    }
+    
+    function stop() {
+        clearTimeout(animate);
+        textObj.style.top = '0px'; 
+    }
+    
+    function chooseText(){
+      console.log("chosen");
+    }
+    // }
+
+    
+    //////////////////////////////////////////////////////////////////////////////////////
+
+
+    //calls this when page loads - just for testing needs to be removed
+    document.addEventListener("DOMContentLoaded", function(event) {
+
+      startGame(level, lyricsAlreadyUsed);
+
+    });
+    
+    // TODO put in Spotify API call
+    // const userAction = async () => {
+    //     const response = await fetch('');
+    //     const myJson = await response.json(); //extract JSON from the http response
+
+    
+    </script>
+    <meta charset="utf-8">
+    <title>Madlib Mad Libs</title>
+    </head>
+      <body>
+        <h1>Madlib Mad Libs</h1>
+          <br>
+          <p id="level"></p>
+          </input><button onclick="makeTextObj();">Start</button><button onclick="stop();")>Pause</button>
+          <br>
+          <br>
+          <div id="lyrics_form"></div>
+          <br>
+      </body>
+</html>
